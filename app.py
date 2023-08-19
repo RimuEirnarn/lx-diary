@@ -4,6 +4,18 @@ from datetime import datetime
 from flask import Flask, render_template, jsonify, request
 from pymongo import MongoClient
 
+def cast_int(any_, fallback: int):
+    try:
+        return int(any_)
+    except Exception:
+        return fallback
+
+def cast_float(any_, fallback: float):
+    try:
+        return float(any_)
+    except Exception:
+        return fallback
+
 load_dotenv()
 app = Flask(__name__)
 
@@ -24,6 +36,7 @@ def show_diary():
 def save_diary():
     title = request.form["title"]
     content = request.form["content"]
+    last_ts = cast_float(request.form.get("last_ts", 0.0), 0.0)
     file = request.files['file']
     profile = request.files['profile']
 
@@ -48,7 +61,9 @@ def save_diary():
         "profile": p_filename
     }
     diary.insert_one(entry.copy())
-    return jsonify({"message": "Done!", "status": "OK", "entries": [entry]})
+    search_query = {} if last_ts in (0, 0.0) else {'timestamp': {'$gt': last_ts}}
+
+    return jsonify({"message": "Done!", "status": "OK", "entries": [*(diary.find(search_query, {'_id': False}))]})
 
 if __name__ == '__main__':
     app.run('0.0.0.0', port=5000, debug=True)

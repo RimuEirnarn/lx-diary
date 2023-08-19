@@ -7,6 +7,9 @@
       name="viewport"
       content="width=device-width, initial-scale=1, shrink-to-fit=no"
     />
+    <meta property="og:title" content="RimuEirnarn LX Diary" />
+    <meta property="og:description" content="RimuEirnarn's task on Diary from LearningX" />
+    <meta property="og:image" content="{{ url_for('static', filename='ogimage.png') }}" />
 
     <!-- Bootstrap CSS -->
     <link
@@ -33,6 +36,25 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bs-custom-file-input/dist/bs-custom-file-input.js"></script>
     <script>
+      function sanitize(string) {
+        const map = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#x27;',
+          "/": '&#x2F;',
+          "?": "&grave;"
+        };
+        const reg = /[&<>"'/]/ig;
+        return string.replace(reg, (match)=>(map[match]));
+      }
+
+      function parseTime(dated){
+        return `${dated.getFullYear()}/${dated.getMonth()}/${dated.getDay()} ${dated.getHours()}:${dated.getMinutes()}:${dated.getSeconds()}`
+      }
+
+      const latestState = {'timestamp': 0}
       $(document).ready(function () {
         console.log(`${window.location.host}/index.html loaded`)
         listing();
@@ -62,9 +84,10 @@
         for (let i = 0; i < entries.length; i++) {
           let title = entries[i]["title"]
           let content = entries[i]["content"]
-          let file = entries[i]['image'] ? entries[i]['image'] : "https://www.gardendesign.com/pictures/images/675x529Max/site_3/helianthus-yellow-flower-pixabay_11863.jpg"
-          let profile = entries[i]['profile'] ? entries[i]['profile'] : "https://www.gardendesign.com/pictures/images/675x529Max/site_3/helianthus-yellow-flower-pixabay_11863.jpg"
+          let file = entries[i]['image'] || "https://www.gardendesign.com/pictures/images/675x529Max/site_3/helianthus-yellow-flower-pixabay_11863.jpg"
+          let profile = entries[i]['profile'] || "https://www.gardendesign.com/pictures/images/675x529Max/site_3/helianthus-yellow-flower-pixabay_11863.jpg"
           const date = new Date(Number(entries[i]["timestamp"]) * 1000)
+          latestState['timestamp'] = entries[i]['timestamp']
           let html = `
         <div class="col-4">
           <div class="card">
@@ -82,13 +105,13 @@
                 width="72px"
               />
 
-              <h5 class="card-title">${title}</h5>
-              <p class="card-text">${content}</p>
-              <h6 class="card-subtitle mb-2 text-muted">${date.toLocaleDateString('id-ID')}</h6>
+              <h5 class="card-title">${sanitize(title)}</h5>
+              <p class="card-text">${sanitize(content)}</p>
+              <h6 class="card-subtitle mb-2 text-muted">${parseTime(date)}</h6>
             </div>
           </div>
         </div>`
-          $("#cards-box").append(html)
+          $("#cards-box").prepend(html)
         }
       }
 
@@ -122,6 +145,7 @@
         form.append("profile", profile)
         form.append("title", title)
         form.append("content", content)
+        form.append("last_ts", latestState['timestamp'])
 
         $.ajax({
           type: "POST",
